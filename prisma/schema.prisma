@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MealCategory {
+  lunch
+  dinner
+  snacks
+}
+
+model FoodItem {
+  id               String   @id @default(cuid())
+  name             String
+  normalizedName   String   @unique
+  caloriesPer100g  Float
+  proteinPer100g   Float?
+  carbsPer100g     Float?
+  fatPer100g       Float?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  mealEntries MealEntry[]
+  batchItems  BatchCookItem[]
+}
+
+model MealLog {
+  id        String      @id @default(cuid())
+  loggedFor DateTime
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  entries MealEntry[]
+
+  @@unique([loggedFor])
+}
+
+model MealEntry {
+  id            String       @id @default(cuid())
+  mealLogId     String
+  foodItemId    String?
+  batchCookId   String?
+  foodName      String
+  weightGrams   Float
+  calories      Float?
+  category      MealCategory
+  createdAt     DateTime     @default(now())
+
+  mealLog    MealLog    @relation(fields: [mealLogId], references: [id], onDelete: Cascade)
+  foodItem   FoodItem?  @relation(fields: [foodItemId], references: [id], onDelete: SetNull)
+  batchCook  BatchCook? @relation(fields: [batchCookId], references: [id], onDelete: SetNull)
+
+  @@index([mealLogId])
+  @@index([category])
+  @@index([batchCookId])
+}
+
+model BatchCook {
+  id               String   @id @default(cuid())
+  name             String
+  servings         Int?
+  totalWeightGrams Float
+  totalCalories    Float
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  items BatchCookItem[]
+  mealEntries MealEntry[]
+}
+
+model BatchCookItem {
+  id             String    @id @default(cuid())
+  batchCookId    String
+  foodItemId     String?
+  foodName       String
+  weightGrams    Float
+  calories       Float?
+  caloriesSource String
+  createdAt      DateTime  @default(now())
+
+  batchCook BatchCook @relation(fields: [batchCookId], references: [id], onDelete: Cascade)
+  foodItem  FoodItem? @relation(fields: [foodItemId], references: [id], onDelete: SetNull)
+
+  @@index([batchCookId])
+}
